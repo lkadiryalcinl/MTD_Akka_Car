@@ -1,0 +1,226 @@
+#include <SoftwareSerial.h>
+SoftwareSerial BTSerial(0, 1);
+
+#define rightEcho 12
+#define rightTrig 13
+
+#define frontEcho 10
+#define frontTrig 11
+
+#define leftEcho 8
+#define leftTrig 9
+
+#define LDRPin A0
+// #define LDRLed 22
+
+#define leftMotorBackward 7
+#define leftMotorForward 4
+#define rightMotorForward 3
+#define rightMotorBackward 2
+#define leftMotorEn 6
+#define rightMotorEn 5
+
+int motorSpeed = 80;
+int rightDistance = 0;
+int leftDistance = 0;
+int frontDistance = 0;
+int minDistance = 30;
+boolean isMotorStarted = false;
+
+void setup() {
+
+  Serial.begin(38400);
+  BTSerial.begin(9600);
+
+  // pinMode(LDRLed, OUTPUT);
+
+  // HC SR04 kurulumu
+  setupDistanceSensors(rightTrig, rightEcho);
+  setupDistanceSensors(frontTrig, frontEcho);
+  setupDistanceSensors(leftTrig, leftEcho);
+
+  // Motor pin ayarlamaları
+  pinMode(leftMotorBackward, OUTPUT);
+  pinMode(leftMotorForward, OUTPUT);
+  pinMode(rightMotorForward, OUTPUT);
+  pinMode(rightMotorBackward, OUTPUT);
+  pinMode(leftMotorEn, OUTPUT);
+  pinMode(rightMotorEn, OUTPUT);
+
+  Serial.println("ARDUINO STARTED");
+}
+
+void loop() {
+
+  if (Serial.available()) {
+    BTSerial.write(Serial.read());
+  }
+
+  if (BTSerial.available()) {
+    char data = BTSerial.read();
+    // if (data == 'a' || data == 'A') {
+    //   isMotorStarted = !isMotorStarted;
+    // }
+    switch (data) {
+      case 'U':
+        forward();
+        break;
+      case 'D':
+        backward();
+        break;
+      case 'L':
+        left();
+        break;
+      case 'R':
+        right();
+        break;
+      default:
+        stopMotor();
+        break;
+    }
+  }
+
+  // if (isMotorStarted) {
+  //   rightDistance = readDataFromDistanceSensor(rightTrig, rightEcho, "Right");
+  //   frontDistance = readDataFromDistanceSensor(frontTrig, frontEcho, "Front");
+  //   leftDistance = readDataFromDistanceSensor(leftTrig, leftEcho, "Left");
+
+  //   if (frontDistance > minDistance) {
+  //     forward();
+  //     delay(100);
+  //     return;
+  //   }
+
+  //   if (leftDistance < minDistance && rightDistance < minDistance) {
+  //     backward();
+  //     delay(500);
+  //     return;
+  //   }
+
+  //   if (leftDistance < minDistance) {
+  //     if (leftDistance < minDistance && frontDistance < minDistance && rightDistance < minDistance) {
+  //       backward();
+  //       delay(500);
+  //     } else {
+  //       right();
+  //       delay(300);
+  //     }
+  //     return;
+  //   }
+
+  //   if (rightDistance < minDistance) {
+  //     if (leftDistance < minDistance && frontDistance < minDistance && rightDistance < minDistance) {
+  //       backward();
+  //       delay(500);
+  //     } else {
+  //       left();
+  //       delay(300);
+  //     }
+  //     return;
+  //   }
+
+  //   /*else if (rightDistance > leftDistance) {
+  //     if (rightDistance < minDistance && leftDistance < minDistance && frontDistance < minDistance) {
+  //       stopMotor();
+  //       delay(200);
+  //     } else {
+  //       right();
+  //       delay(200);
+  //     }
+  //   } else if (leftDistance > rightDistance) {
+  //     if (rightDistance < minDistance && leftDistance < minDistance && frontDistance < minDistance) {
+  //       stopMotor();
+  //       delay(200);
+  //     } else {
+  //       left();
+  //       delay(200);
+  //     }
+  //   } else if (frontDistance < minDistance) {
+  //     backward();
+  //     delay(1000);
+  //   }*/
+  // } else {
+  //   stopMotor();
+  // }
+  //readDataFromLDR();
+}
+
+void forward() {
+  digitalWrite(rightMotorForward, HIGH);
+  digitalWrite(leftMotorForward, HIGH);
+  digitalWrite(rightMotorBackward, LOW);
+  digitalWrite(leftMotorBackward, LOW);
+
+  analogWrite(rightMotorEn, motorSpeed);
+  analogWrite(leftMotorEn, motorSpeed +120);
+}
+
+void backward() {
+  digitalWrite(rightMotorBackward, HIGH);
+  digitalWrite(leftMotorBackward, HIGH);
+  digitalWrite(rightMotorForward, LOW);
+  digitalWrite(leftMotorForward, LOW);
+
+  analogWrite(rightMotorEn, motorSpeed);
+  analogWrite(leftMotorEn, motorSpeed + 120);
+}
+
+void right() {
+  digitalWrite(leftMotorForward, HIGH);
+  digitalWrite(rightMotorBackward, LOW);
+  digitalWrite(rightMotorForward, LOW);
+  digitalWrite(leftMotorBackward, LOW);
+
+  analogWrite(rightMotorEn, 0);
+  analogWrite(leftMotorEn, motorSpeed + 120);
+}
+
+void left() {
+  digitalWrite(rightMotorForward, HIGH);
+  digitalWrite(leftMotorBackward, LOW);
+  digitalWrite(leftMotorForward, LOW);
+  digitalWrite(rightMotorBackward, LOW);
+
+  analogWrite(rightMotorEn, motorSpeed);
+  analogWrite(leftMotorEn, 0);
+}
+
+void stopMotor() {
+  digitalWrite(rightMotorForward, LOW);
+  digitalWrite(rightMotorBackward, LOW);
+  digitalWrite(leftMotorBackward, LOW);
+  digitalWrite(leftMotorForward, LOW);
+  analogWrite(rightMotorEn, 0);
+  analogWrite(leftMotorEn, 0);
+}
+
+void setupDistanceSensors(int trigPin, int echoPin) {
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+}
+
+int readDataFromDistanceSensor(int trigPin, int echoPin, String sensorName) {
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(3);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  long time = pulseIn(echoPin, HIGH);
+  long distance = (time / 2) * 0.0343;
+
+  /*Serial.print(sensorName);
+  Serial.print(distance);
+  Serial.println(" cm");*/
+  return distance;
+}
+
+void readDataFromLDR() {
+  int LDRValue = analogRead(LDRPin);
+  Serial.println(LDRValue);
+  if (LDRValue < 500) {
+    // digitalWrite(LDRLed, HIGH);
+  } else {
+    // digitalWrite(LDRLed, LOW);
+  }
+}
